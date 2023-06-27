@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
 import nltkmodules
+import pickle
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -88,13 +89,20 @@ LOADER_MAPPING = {
 
 
 def load_single_document(file_path: str) -> List[Document]:
-    ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()
-
-    raise ValueError(f"Unsupported file extension '{ext}'")
+    try:        
+        ext = "." + file_path.rsplit(".", 1)[-1]
+        if ext in LOADER_MAPPING:
+            loader_class, loader_args = LOADER_MAPPING[ext]
+            loader = loader_class(file_path, **loader_args)
+            return loader.load()
+        else:
+            raise ValueError(f"Unsupported file extension '{ext}'")
+        
+    except pickle.UnpicklingError as e:
+        # Ignore broken file
+        print("=== ERROR ===")
+        print(f"file_path : '{file_path}'")
+        print(e)
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
