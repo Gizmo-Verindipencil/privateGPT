@@ -5,6 +5,7 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
+import nltkmodules
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -30,7 +31,6 @@ from constants import CHROMA_SETTINGS
 
 load_dotenv()
 
-
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
@@ -38,6 +38,8 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+# Load nltk modules
+nltkmodules.load()
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
