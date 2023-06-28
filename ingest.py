@@ -87,19 +87,13 @@ LOADER_MAPPING = {
     # Add more mappings for other file extensions and loaders as needed
 }
 
-# The number of loaded files / skipped files
-loaded = 0
-skipped = 0
-
 def load_single_document(file_path: str) -> List[Document]:
     try:        
         ext = "." + file_path.rsplit(".", 1)[-1]
         if ext in LOADER_MAPPING:
             loader_class, loader_args = LOADER_MAPPING[ext]
             loader = loader_class(file_path, **loader_args)
-            loaded = loader.load()
-            imported += 1
-            return loaded
+            return loader.load()
         else:
             raise ValueError(f"Unsupported file extension '{ext}'")
         
@@ -108,7 +102,11 @@ def load_single_document(file_path: str) -> List[Document]:
         print("=== ERROR ===")
         print(f"file_path : '{file_path}'")
         print(e)
-        skipped += 1
+        return None
+
+# The number of loaded files / skipped files
+loaded = 0
+skipped = 0
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -124,7 +122,13 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
     with Pool(processes=os.cpu_count()) as pool:
         results = []
         with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
+            global loaded
+            global skipped
             for i, docs in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
+                if docs is None:
+                    skipped += 1
+                    continue
+                loaded += 1
                 results.extend(docs)
                 pbar.update()
 
