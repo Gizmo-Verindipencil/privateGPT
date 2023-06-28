@@ -87,6 +87,9 @@ LOADER_MAPPING = {
     # Add more mappings for other file extensions and loaders as needed
 }
 
+# The number of loaded files / skipped files
+loaded = 0
+skipped = 0
 
 def load_single_document(file_path: str) -> List[Document]:
     try:        
@@ -94,7 +97,9 @@ def load_single_document(file_path: str) -> List[Document]:
         if ext in LOADER_MAPPING:
             loader_class, loader_args = LOADER_MAPPING[ext]
             loader = loader_class(file_path, **loader_args)
-            return loader.load()
+            loaded = loader.load()
+            imported += 1
+            return loaded
         else:
             raise ValueError(f"Unsupported file extension '{ext}'")
         
@@ -103,6 +108,7 @@ def load_single_document(file_path: str) -> List[Document]:
         print("=== ERROR ===")
         print(f"file_path : '{file_path}'")
         print(e)
+        skipped += 1
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -172,6 +178,11 @@ def main():
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
+
+    # Show stats (success / failure)
+    print(f"Total   : {loaded + skipped}\n"
+          f"Loaded  : {loaded}\n"
+          f"Skipped : {skipped}")
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 
