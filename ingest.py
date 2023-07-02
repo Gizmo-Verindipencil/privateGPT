@@ -75,7 +75,7 @@ LOADER_MAPPING = {
     ".eml": (MyElmLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
     ".html": (UnstructuredHTMLLoader, {}),
-    ".js": (JSONLoader, {}),
+    ".js": (TextLoader, {"encoding": "utf8"}),
     ".json": (JSONLoader, {"encoding": "utf8"}),
     ".md": (UnstructuredMarkdownLoader, {}),
     ".odt": (UnstructuredODTLoader, {}),
