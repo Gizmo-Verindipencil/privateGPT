@@ -5,6 +5,8 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
+import nltkmodules
+import pickle
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -18,6 +20,7 @@ from langchain.document_loaders import (
     UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
     UnstructuredWordDocumentLoader,
+    JSONLoader,
 )
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -29,7 +32,6 @@ from constants import CHROMA_SETTINGS
 
 load_dotenv()
 
-
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
@@ -37,6 +39,8 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+# Load nltk modules
+nltkmodules.load()
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
@@ -71,24 +75,38 @@ LOADER_MAPPING = {
     ".eml": (MyElmLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
     ".html": (UnstructuredHTMLLoader, {}),
+    ".js": (TextLoader, {"encoding": "utf8"}),
+    ".json": (JSONLoader, {"encoding": "utf8"}),
     ".md": (UnstructuredMarkdownLoader, {}),
     ".odt": (UnstructuredODTLoader, {}),
     ".pdf": (PyMuPDFLoader, {}),
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
+    ".ps1": (TextLoader, {"encoding": "shift-jis"}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
-
 def load_single_document(file_path: str) -> List[Document]:
-    ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()
+    try:        
+        ext = "." + file_path.rsplit(".", 1)[-1]
+        if ext in LOADER_MAPPING:
+            loader_class, loader_args = LOADER_MAPPING[ext]
+            loader = loader_class(file_path, **loader_args)
+            return loader.load()
+        else:
+            raise ValueError(f"Unsupported file extension '{ext}'")
+        
+    except pickle.UnpicklingError as e:
+        # Ignore broken file
+        print("=== ERROR ===")
+        print(f"file_path : '{file_path}'")
+        print(e)
+        return None
 
-    raise ValueError(f"Unsupported file extension '{ext}'")
+# The number of loaded files / skipped files
+loaded = 0
+skipped = 0
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -104,7 +122,13 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
     with Pool(processes=os.cpu_count()) as pool:
         results = []
         with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
+            global loaded
+            global skipped
             for i, docs in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
+                if docs is None:
+                    skipped += 1
+                    continue
+                loaded += 1
                 results.extend(docs)
                 pbar.update()
 
@@ -158,6 +182,11 @@ def main():
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
+
+    # Show stats (success / failure)
+    print(f"Total   : {loaded + skipped}\n"
+          f"Loaded  : {loaded}\n"
+          f"Skipped : {skipped}")
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 

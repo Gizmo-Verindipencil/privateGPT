@@ -49,12 +49,15 @@ The supported extensions are:
    - `.eml`: Email,
    - `.epub`: EPub,
    - `.html`: HTML File,
+   - `.js` : JavaScript code,
+   - `.json` : JSON file (UTF-8),
    - `.md`: Markdown,
    - `.msg`: Outlook Message,
    - `.odt`: Open Document Text,
    - `.pdf`: Portable Document Format (PDF),
    - `.pptx` : PowerPoint Document,
    - `.ppt` : PowerPoint Document,
+   - `.ps1` : PowerShell code(SHIFT-JIS), 
    - `.txt`: Text file (UTF-8),
 
 Run the following command to ingest all the data.
